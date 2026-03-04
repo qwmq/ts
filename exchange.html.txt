@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Twitter アカウント販売</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#13131a;--card:#1a1a24;--border:#2a2a3a;
+  --accent:#7c3aed;--accent2:#06b6d4;--text:#e8e8f0;--muted:#6b6b80;
+  --sold:#ef4444;--available:#10b981;--new:#f59e0b;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* HEADER */
+header{
+  position:sticky;top:0;z-index:100;
+  background:rgba(10,10,15,0.92);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+  padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+}
+.logo{
+  font-family:'IBM Plex Mono',monospace;font-size:1.15rem;font-weight:600;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap;
+}
+.header-right{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+.sort-btn{
+  font-family:'IBM Plex Mono',monospace;font-size:0.68rem;font-weight:600;
+  background:var(--surface);color:var(--muted);
+  border:1px solid var(--border);border-radius:6px;
+  padding:6px 9px;cursor:pointer;transition:all .18s;white-space:nowrap;
+}
+.sort-btn:hover,.sort-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+#searchInput{
+  font-family:'Noto Sans JP',sans-serif;font-size:0.82rem;
+  background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;
+  padding:7px 13px;outline:none;transition:border-color .2s;width:140px;
+}
+#searchInput:focus{border-color:var(--accent);}
+
+/* MAIN */
+main{max-width:1300px;margin:0 auto;padding:24px 16px;}
+
+/* STATS */
+.stats{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.stat{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:10px 18px;display:flex;flex-direction:column;gap:2px;
+}
+.stat-label{font-size:0.68rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+.stat-value{font-family:'IBM Plex Mono',monospace;font-size:1.25rem;font-weight:600;}
+.stat-value.green{color:var(--available);}
+.stat-value.purple{color:var(--accent);}
+.stat-value.red{color:var(--sold);}
+
+/* FILTER BAR */
+.filter-bar{display:flex;gap:7px;margin-bottom:18px;flex-wrap:wrap;align-items:center;}
+.filter-btn{
+  font-family:'IBM Plex Mono',monospace;font-size:0.68rem;font-weight:600;
+  background:var(--surface);color:var(--muted);
+  border:1px solid var(--border);border-radius:6px;
+  padding:5px 11px;cursor:pointer;transition:all .18s;
+}
+.filter-btn.active-all  {background:var(--accent);color:#fff;border-color:var(--accent);}
+.filter-btn.active-avail{background:rgba(16,185,129,.18);color:var(--available);border-color:var(--available);}
+.filter-btn.active-sold {background:rgba(239,68,68,.15);color:var(--sold);border-color:var(--sold);}
+.price-filter{display:flex;align-items:center;gap:6px;margin-left:auto;}
+.price-filter label{font-size:0.7rem;color:var(--muted);}
+.price-filter select{
+  font-family:'IBM Plex Mono',monospace;font-size:0.7rem;
+  background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:6px;
+  padding:5px 8px;outline:none;cursor:pointer;
+}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:11px;}
+
+/* CARD */
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px;
+  position:relative;display:flex;flex-direction:column;gap:9px;
+  transition:transform .2s,border-color .2s,box-shadow .2s;
+  animation:fadeUp .28s ease both;
+}
+.card.available:hover{
+  transform:translateY(-3px);border-color:var(--accent);
+  box-shadow:0 0 20px rgba(124,58,237,.18);
+}
+.card.available:hover .card-price{
+  color:#c4b5fd;text-shadow:0 0 12px rgba(167,139,250,.4);
+}
+.card.is-sold{opacity:0.45;order:999;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* badges */
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
+.badge{
+  font-family:'IBM Plex Mono',monospace;font-size:0.58rem;font-weight:600;letter-spacing:.05em;
+  padding:3px 7px;border-radius:99px;white-space:nowrap;
+}
+.badge-available{background:rgba(16,185,129,.15);color:var(--available);border:1px solid rgba(16,185,129,.3);}
+.badge-sold     {background:rgba(239,68,68,.12); color:var(--sold);     border:1px solid rgba(239,68,68,.25);}
+.badge-new      {background:rgba(245,158,11,.15);color:var(--new);      border:1px solid rgba(245,158,11,.3);}
+
+.card-id{font-family:'IBM Plex Mono',monospace;font-size:1rem;color:var(--accent2);font-weight:600;letter-spacing:.03em;}
+.card-price{
+  font-family:'IBM Plex Mono',monospace;font-size:1.18rem;font-weight:600;color:#fff;
+  transition:color .2s,text-shadow .2s;
+}
+.card-price span{font-size:0.7rem;color:var(--muted);font-weight:400;margin-left:2px;}
+
+/* buttons */
+.card-btns{display:flex;gap:6px;margin-top:2px;}
+.btn-twitter,.btn-buy{
+  flex:1;font-family:'IBM Plex Mono',monospace;font-size:0.65rem;font-weight:600;
+  border-radius:6px;padding:5px 0;cursor:pointer;transition:all .18s;
+  text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;
+}
+.btn-twitter{
+  background:rgba(6,182,212,.1);color:var(--accent2);
+  border:1px solid rgba(6,182,212,.3);
+}
+.btn-twitter:hover{background:rgba(6,182,212,.22);border-color:var(--accent2);}
+.btn-buy{
+  background:rgba(124,58,237,.15);color:#a78bfa;
+  border:1px solid rgba(124,58,237,.3);
+}
+.btn-buy:hover{background:rgba(124,58,237,.28);border-color:var(--accent);}
+
+.empty{text-align:center;padding:80px 20px;color:var(--muted);font-size:0.92rem;}
+
+/* MODAL */
+.modal-overlay{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.72);backdrop-filter:blur(7px);
+  align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:#1a1a24;border:1px solid #2a2a3a;border-radius:16px;
+  padding:28px;width:100%;max-width:400px;
+  position:relative;animation:popIn .22s ease;
+}
+@keyframes popIn{from{opacity:0;transform:scale(.94);}to{opacity:1;transform:scale(1);}}
+.modal-close{
+  position:absolute;top:13px;right:13px;
+  background:#13131a;border:1px solid #2a2a3a;color:#6b6b80;
+  border-radius:50%;width:28px;height:28px;
+  cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;
+  transition:background .2s;
+}
+.modal-close:hover{background:#2a2a3a;}
+.modal h2{font-size:1.05rem;font-weight:700;margin-bottom:12px;}
+.modal-id-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+.modal-id-tag{
+  font-family:'IBM Plex Mono',monospace;font-size:0.82rem;color:var(--accent2);
+  background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.2);
+  border-radius:6px;padding:4px 10px;
+}
+.copy-btn{
+  font-family:'IBM Plex Mono',monospace;font-size:0.65rem;font-weight:600;
+  background:rgba(6,182,212,.1);color:var(--accent2);
+  border:1px solid rgba(6,182,212,.25);border-radius:6px;
+  padding:4px 9px;cursor:pointer;transition:all .18s;white-space:nowrap;
+}
+.copy-btn:hover{background:rgba(6,182,212,.22);}
+.copy-btn.copied{background:rgba(16,185,129,.15);color:var(--available);border-color:var(--available);}
+.modal-divider{height:1px;background:#2a2a3a;margin:14px 0;}
+.modal-body{font-size:0.85rem;color:#a0a0b0;line-height:1.85;}
+.modal-body a{color:var(--accent2);text-decoration:none;}
+.modal-body a:hover{text-decoration:underline;}
+
+/* MOBILE */
+@media(max-width:600px){
+  .grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:9px;}
+  .price-filter{margin-left:0;}
+  header{padding:10px 14px;}
+  main{padding:16px 12px;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🐦 Twitter Shop</div>
+  <div class="header-right">
+    <input type="text" id="searchInput" placeholder="🔍 ID検索...">
+    <button class="sort-btn active" data-sort="default">ランダム</button>
+    <button class="sort-btn" data-sort="id">ID順</button>
+    <button class="sort-btn" data-sort="asc">価格↑</button>
+    <button class="sort-btn" data-sort="desc">価格↓</button>
+  </div>
+</header>
+
+<main>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">総数</div><div class="stat-value purple" id="statTotal">0</div></div>
+    <div class="stat"><div class="stat-label">在庫あり</div><div class="stat-value green" id="statAvail">0</div></div>
+    <div class="stat"><div class="stat-label">売り切れ</div><div class="stat-value red" id="statSold">0</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active-all" data-filter="all">すべて</button>
+    <button class="filter-btn" data-filter="available">✓ available</button>
+    <button class="filter-btn" data-filter="sold">✕ sold</button>
+    <div class="price-filter">
+      <label>価格帯</label>
+      <select id="priceFilter">
+        <option value="all">すべて</option>
+        <option value="1500">¥1,500</option>
+        <option value="1800">¥1,800</option>
+        <option value="1900">¥1,900</option>
+        <option value="2000">¥2,000</option>
+        <option value="2500">¥2,500〜</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none">アイテムが見つかりません</div>
+</main>
+
+<!-- 購入モーダル -->
+<div class="modal-overlay" id="buyModal">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <h2>購入手続き</h2>
+    <div class="modal-id-row">
+      <span class="modal-id-tag" id="modalId"></span>
+      <button class="copy-btn" id="copyBtn">IDをコピー</button>
+    </div>
+    <div class="modal-divider"></div>
+    <div class="modal-body">
+      ご購入をご希望の方は、以下の連絡先から購入希望のIDと、送金リンクを送信してからスタッフをメンションください。<br><br>
+      <strong>Discord:</strong><br>
+      <a href="https://discord.gg/chw4bJtnzJ" target="_blank" rel="noopener">https://discord.gg/chw4bJtnzJ</a><br>
+      の <strong>#🎫 ｜ ticket</strong> まで
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ★ ここを編集して管理 ★
+// status: 'available' or 'sold'
+// soldDate: soldにした日付 'YYYY-MM-DD'（5日後に自動アーカイブ）
+// addedDate: 追加日 'YYYY-MM-DD'（3日以内はNEWバッジ表示）
+// price: 手動指定したい場合のみ記入（省略時は数字種類数で自動計算）
+// ============================================================
+const items = [
+  { id:'040355', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'080331', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'080477', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'101774', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'101850', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'107066', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'204066', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'206866', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'212351', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'213773', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'218928', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'221284', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'224602', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'224694', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'225120', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'228240', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'230262', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'231171', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'232853', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'234341', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'238484', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'243553', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'245858', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'247752', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'250270', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'252954', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'257667', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'258929', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'262876', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'266756', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'269239', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'269726', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'271424', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'275652', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'281020', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'289255', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'292566', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'292802', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'293387', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'303109', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'305575', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'309937', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'317011', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'318336', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'318414', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'318919', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'319155', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'320243', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'321939', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'323102', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'323581', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'323972', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'501033', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'503103', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'507027', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'510191', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'511341', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'513558', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'519011', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'520720', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'522090', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'523823', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'525312', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'526455', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'529223', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'531521', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'539033', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'541522', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'543447', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'545616', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'546776', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'548433', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'550180', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'552456', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'554740', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'557617', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'558278', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'561065', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'566510', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'567651', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'569356', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'572070', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'572979', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'573275', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'578576', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'581008', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'581335', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'585770', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'588262', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'589596', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'596546', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'598518', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'714770', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'716112', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'717612', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'720780', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'721373', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'722060', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'723357', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'727102', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'727281', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'731033', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'733103', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'734397', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'737579', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'738389', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'749419', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'751741', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'752712', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'757884', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'760960', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'763743', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'767708', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'771519', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'771647', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'772924', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'773530', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'773884', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'780722', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'783117', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'783578', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'784284', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'797556', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'906079', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'907903', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'908208', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'909013', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'909379', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'909961', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'917677', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'920988', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'922412', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'926552', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'930293', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'930793', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'933594', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'937363', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'940924', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'943398', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'945525', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'947476', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'949755', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'951101', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'952323', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'957879', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'958656', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'959943', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'960509', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'966106', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'968828', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'971377', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'972332', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'976272', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'979871', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'982489', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'982977', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'987769', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'987894', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'990727', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'992589', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'303078', status:'available', soldDate:'', addedDate:'2025-03-04' },
+  { id:'422200', status:'available', soldDate:'', addedDate:'2025-03-04', price:2500 },
+  { id:'344467', status:'available', soldDate:'', addedDate:'2025-03-04', price:2500 },
+  { id:'319777', status:'available', soldDate:'', addedDate:'2025-03-04', price:2500 },
+  { id:'040060', status:'available', soldDate:'', addedDate:'2025-03-04', price:2500 },
+  { id:'041420', status:'available', soldDate:'', addedDate:'2025-03-04', price:2000 },
+  { id:'028078', status:'available', soldDate:'', addedDate:'2025-03-04', price:2000 },
+  { id:'063322', status:'available', soldDate:'', addedDate:'2025-03-04', price:2000 },
+  { id:'013345', status:'available', soldDate:'', addedDate:'2025-03-04', price:1900 },
+  { id:'042288', status:'available', soldDate:'', addedDate:'2025-03-04', price:1900 },
+  { id:'011885', status:'available', soldDate:'', addedDate:'2025-03-04', price:1900 },
+];
+// ============================================================
+
+const NOW = new Date();
+
+function daysDiff(dateStr){
+  if(!dateStr) return 9999;
+  return (NOW - new Date(dateStr)) / (1000*60*60*24);
+}
+
+function getPrice(it){
+  if(it.price) return it.price;
+  const kinds = new Set(it.id.replace(/\D/g,'')).size;
+  if(kinds<=3) return 2000;
+  if(kinds===4) return 1800;
+  return 1500;
+}
+
+function isArchived(it){
+  return it.status==='sold' && it.soldDate && daysDiff(it.soldDate)>=5;
+}
+
+function isNew(it){
+  return it.addedDate && daysDiff(it.addedDate)<=3;
+}
+
+function displayId(id){ return id.length===6 ? '@'+id : id; }
+function twitterUrl(id){ return 'https://twitter.com/'+id; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+let sortMode='default', searchQ='', filterMode='all', priceFilter='all';
+
+function render(){
+  let list = items
+    .filter(it=>!isArchived(it))
+    .map((it,i)=>({...it, _i:i, price:getPrice(it), isNew:isNew(it)}));
+
+  if(searchQ){
+    const q=searchQ.toLowerCase();
+    list=list.filter(it=>it.id.toLowerCase().includes(q));
+  }
+  if(filterMode==='available') list=list.filter(it=>it.status==='available');
+  if(filterMode==='sold')      list=list.filter(it=>it.status==='sold');
+
+  if(priceFilter==='2500') list=list.filter(it=>it.price>=2500);
+  else if(priceFilter!=='all') list=list.filter(it=>it.price===parseInt(priceFilter));
+
+  // available を前、sold を後ろに
+  list.sort((a,b)=>{
+    if(a.status===b.status) return 0;
+    return a.status==='available' ? -1 : 1;
+  });
+
+  // available内でソート
+  if(sortMode==='default'){
+    // available同士はランダム、sold同士はランダム
+    const avail=list.filter(x=>x.status==='available').sort(()=>Math.random()-.5);
+    const sold =list.filter(x=>x.status==='sold').sort(()=>Math.random()-.5);
+    list=[...avail,...sold];
+  } else if(sortMode==='id'){
+    list.sort((a,b)=>{
+      if(a.status!==b.status) return a.status==='available'?-1:1;
+      return a.id.localeCompare(b.id);
+    });
+  } else if(sortMode==='asc'){
+    list.sort((a,b)=>{
+      if(a.status!==b.status) return a.status==='available'?-1:1;
+      return a.price-b.price;
+    });
+  } else if(sortMode==='desc'){
+    list.sort((a,b)=>{
+      if(a.status!==b.status) return a.status==='available'?-1:1;
+      return b.price-a.price;
+    });
+  }
+
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  const empty=document.getElementById('empty');
+
+  if(list.length===0){empty.style.display='block';}
+  else{
+    empty.style.display='none';
+    list.forEach((it,delay)=>{
+      const avail=it.status==='available';
+      const card=document.createElement('div');
+      card.className='card '+(avail?'available':'is-sold');
+      card.style.animationDelay=(delay*0.012)+'s';
+      card.innerHTML=`
+        <div class="card-top">
+          <div class="card-id">${esc(displayId(it.id))}</div>
+          <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">
+            <span class="badge ${avail?'badge-available':'badge-sold'}">${avail?'✓ available':'✕ sold'}</span>
+            ${it.isNew && avail ? '<span class="badge badge-new">NEW</span>' : ''}
+          </div>
+        </div>
+        <div class="card-price">¥${it.price.toLocaleString()}<span>JPY</span></div>
+        <div class="card-btns" style="flex-direction:column;">
+          <button class="btn-buy" onclick="openBuyModal('${esc(displayId(it.id))}')">購入する</button>
+          <a class="btn-twitter" href="${twitterUrl(it.id)}" target="_blank" rel="noopener">Twitterで見る</a>
+        </div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  const visible=items.filter(it=>!isArchived(it));
+  document.getElementById('statTotal').textContent=visible.length;
+  document.getElementById('statAvail').textContent=visible.filter(i=>i.status==='available').length;
+  document.getElementById('statSold').textContent=visible.filter(i=>i.status==='sold').length;
+}
+
+// ソート
+document.querySelectorAll('.sort-btn').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); sortMode=btn.dataset.sort; render();
+  };
+});
+
+// フィルター
+document.querySelectorAll('.filter-btn').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active-all','active-avail','active-sold'));
+    filterMode=btn.dataset.filter;
+    if(filterMode==='all')       btn.classList.add('active-all');
+    if(filterMode==='available') btn.classList.add('active-avail');
+    if(filterMode==='sold')      btn.classList.add('active-sold');
+    render();
+  };
+});
+
+// 価格フィルター
+document.getElementById('priceFilter').onchange=e=>{priceFilter=e.target.value;render();};
+
+// 検索
+document.getElementById('searchInput').oninput=e=>{searchQ=e.target.value;render();};
+
+// 購入モーダル
+window.openBuyModal=(id)=>{
+  document.getElementById('modalId').textContent=id;
+  document.getElementById('copyBtn').textContent='IDをコピー';
+  document.getElementById('copyBtn').className='copy-btn';
+  document.getElementById('buyModal').classList.add('open');
+};
+function closeBuyModal(){ document.getElementById('buyModal').classList.remove('open'); }
+document.getElementById('modalClose').onclick=closeBuyModal;
+document.getElementById('buyModal').onclick=e=>{if(e.target===document.getElementById('buyModal'))closeBuyModal();};
+
+// IDコピー
+document.getElementById('copyBtn').onclick=()=>{
+  const id=document.getElementById('modalId').textContent;
+  navigator.clipboard.writeText(id).then(()=>{
+    const btn=document.getElementById('copyBtn');
+    btn.textContent='✓ コピーしました';
+    btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='IDをコピー';btn.classList.remove('copied');},2000);
+  });
+};
+
+render();
+</script>
+</body>
+</html>
